@@ -34,35 +34,62 @@ export interface LoginPayload {
 
 export const authApi = {
   registerClient: (data: RegisterClientPayload) =>
-    api.post("auth/register/client", data),
+    api.post("/auth/register/client", data),
 
   registerOwner: (data: RegisterOwnerPayload) =>
-    api.post("auth/register/owner", data),
+    api.post("/auth/register/owner", data),
 
-  registerBarber: (data: RegisterBarberPayload) =>
-    api.post("auth/register/barber", data), // precisa token owner
+  registerBarber: async (data: RegisterBarberPayload) => {
+    const res = await api.post("/auth/register/barber", data);
+
+    // backend retorna tempPassword - importante para o owner
+    return res;
+  },
 
   login: async (data: LoginPayload) => {
-    const res = await api.post("auth/login", data);
+    const res = await api.post("/auth/login", data);
 
-    if (!res?.token) throw new Error("Token inválido.");
+    if (!res?.token) {
+      throw new Error("Token inválido.");
+    }
 
-    // Armazena sempre o token
+    // Caso de troca obrigatória de senha
+    if (res.must_change_password) {
+      localStorage.setItem("barboo_temp_token", res.token);
+      return { must_change_password: true };
+    }
+
+    // Caso normal
     localStorage.setItem("barboo_token", res.token);
+    localStorage.setItem("barboo_user", JSON.stringify(res.user));
 
-    // Se houver user, armazena
-    if (res.user) {
-      localStorage.setItem("barboo_user", JSON.stringify(res.user));
+    return res;
+  },
+
+  changePassword: async (newPassword: string) => {
+    const tempToken = localStorage.getItem("barboo_temp_token");
+    if (!tempToken) throw new Error("Token de verificação ausente.");
+
+    // Troca temporariamente o token usado pelo wrapper
+    const oldToken = localStorage.getItem("barboo_token");
+    localStorage.setItem("barboo_token", tempToken);
+
+    const res = await api.patch("/auth/change-password", { newPassword });
+
+    // Remove token temporário e restaura o antigo (se existir)
+    localStorage.removeItem("barboo_temp_token");
+    if (oldToken) {
+      localStorage.setItem("barboo_token", oldToken);
+    } else {
+      localStorage.removeItem("barboo_token");
     }
 
     return res;
   },
 
-  changePassword: (newPassword: string) =>
-    api.patch("auth/change-password", { newPassword }),
-
   logout: () => {
     localStorage.removeItem("barboo_token");
     localStorage.removeItem("barboo_user");
+    localStorage.removeItem("barboo_temp_token");
   },
 };

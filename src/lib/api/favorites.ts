@@ -1,23 +1,31 @@
-// src/lib/api/favorites.ts
 import { api } from "./index";
 
-export interface Favorite {
+export interface FavoriteBarbershop {
   id: number;
-  client_id: number;
+  name: string;
+  logo_url: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+export interface Favorite {
   barbershop_id: number;
-  created_at?: string;
+  barbershops: FavoriteBarbershop;
 }
 
 export const favoritesApi = {
-  // POST /favorites/:barbershopId
-  add: (barbershopId: number | string) =>
-    api.post(`favorites/${barbershopId}`),
+  // Favoritar barbearia
+  add: (barbershopId: number): Promise<Favorite> => {
+    return api.post(`/favorites/${barbershopId}`);
+  },
 
-  // DELETE /favorites/:barbershopId
-  remove: (barbershopId: number | string) =>
-    api.delete(`favorites/${barbershopId}`),
+  // Remover favorito
+  remove: (barbershopId: number): Promise<{ success: true }> => {
+    return api.delete(`/favorites/${barbershopId}`);
+  },
 
-  // GET /favorites
-  list: () =>
-    api.get("favorites"),
+  // Listar favoritos do cliente logado
+  list: (): Promise<Favorite[]> => {
+    return api.get("/favorites");
+  }
 };

@@ -1,20 +1,58 @@
-// src/lib/api/barbers.ts
 import { api } from "./index";
 
+export interface BarberUserPayload {
+  name: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  gender: string;
+}
+
+export interface BarberProfilePayload {
+  [key: string]: any; // flexível porque o backend não especifica campos fixos
+}
+
+export interface CreateBarberPayload {
+  user: BarberUserPayload;
+  profile: BarberProfilePayload;
+}
+
+export interface BarberLink {
+  id: number;
+  barbershop_id: number;
+  user_id: number;
+  is_owner: boolean;
+  is_active: boolean;
+}
+
 export const barbersApi = {
-  // GET /barbers/barbershop/:id
-  listByBarbershop: (barbershopId: number | string) =>
-    api.get(`barbers/barbershop/${barbershopId}`),
+  // Criar barbeiro
+  create: (
+    barbershopId: number,
+    data: CreateBarberPayload
+  ) => {
+    return api.post(`/barbers/${barbershopId}/barbers`, data);
+  },
 
-  // POST /barbers/barbershop/:id
-  create: (barbershopId: number | string, data: any) =>
-    api.post(`barbers/barbershop/${barbershopId}`, data),
+  // Listar barbeiros (vínculos)
+  list: (barbershopId: number): Promise<BarberLink[]> => {
+    return api.get(`/barbers/${barbershopId}/barbers`);
+  },
 
-  // PATCH /barbers/barbershop/:id/:userId
-  update: (barbershopId: number | string, userId: number | string, data: any) =>
-    api.patch(`barbers/barbershop/${barbershopId}/${userId}`, data),
+  // Atualizar barbeiro (owner)
+  update: (
+    barbershopId: number,
+    userId: number,
+    updates: Record<string, any>
+  ) => {
+    return api.patch(
+      `/barbers/${barbershopId}/barbers/${userId}`,
+      updates
+    );
+  },
 
-  // POST /barbers/barbershop/:id/owner
-  linkOwner: (barbershopId: number | string) =>
-    api.post(`barbers/barbershop/${barbershopId}/owner`),
+  // Owner vira também barbeiro
+  linkOwner: (barbershopId: number) => {
+    return api.post(`/barbers/${barbershopId}/link-owner`, {});
+  }
 };

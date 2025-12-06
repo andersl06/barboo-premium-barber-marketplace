@@ -1,37 +1,71 @@
-// Bookings API - Official Endpoints
 import { api } from "./index";
+
+export interface CreateBookingPayload {
+  barber_id: number;
+  service_id: number;
+  starts_at: string; // ISO string
+}
 
 export interface Booking {
   id: number;
-  client_id: number;
-  barber_id: number;
   barbershop_id: number;
+  barber_id: number;
+  client_id: number;
   service_id: number;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  price: number;
-  barboo_fee: number;
-  total: number;
+  starts_at: string;
+  ends_at: string;
+  status: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export const bookingsApi = {
-  create: (data: {
-    barber_id: number;
-    barbershop_id: number;
-    service_id: number;
-    date: string;
-    start_time: string;
-  }) => api.post("bookings", data),
+  // Criar booking (CLIENTE)
+  create: (
+    barbershopId: number,
+    payload: CreateBookingPayload
+  ): Promise<Booking> => {
+    return api.post(`/bookings/${barbershopId}`, payload);
+  },
 
-  listByClient: (clientId: number | string) =>
-    api.get(`bookings/client/${clientId}`),
+  // Listar bookings de um barbeiro (BARBER/OWNER)
+  listByBarber: (
+    barbershopId: number,
+    barberId: number
+  ): Promise<Booking[]> => {
+    return api.get(`/bookings/${barbershopId}/barber/${barberId}`);
+  },
 
-  listByBarber: (barberId: number | string) =>
-    api.get(`bookings/barber/${barberId}`),
+  // Listar bookings da barbearia (OWNER/ADMIN)
+  listByBarbershop: (
+    barbershopId: number,
+    filters?: { from?: string; to?: string }
+  ): Promise<Booking[]> => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append("from", filters.from);
+    if (filters?.to) params.append("to", filters.to);
 
-  cancel: (id: number | string) =>
-    api.patch(`bookings/${id}/cancel`),
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return api.get(`/bookings/${barbershopId}${queryString}`);
+  },
+
+  // Cancelar (cliente/barber/owner)
+  cancel: (
+    barbershopId: number,
+    bookingId: number
+  ): Promise<Booking> => {
+    return api.patch(`/bookings/${barbershopId}/cancel/${bookingId}`);
+  },
+
+  // Alterar status (barber/owner)
+  updateStatus: (
+    barbershopId: number,
+    bookingId: number,
+    status: "confirmed" | "completed" | "cancelled"
+  ): Promise<Booking> => {
+    return api.patch(
+      `/bookings/${barbershopId}/status/${bookingId}`,
+      { status }
+    );
+  },
 };

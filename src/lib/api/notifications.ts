@@ -1,18 +1,23 @@
-// Notifications API
 import { api } from "./index";
 
 export interface Notification {
   id: number;
   user_id: number;
-  title: string;
+  schedule_id?: number | null;
+  type: string;
   message: string;
-  is_read: boolean;
+  status: "read" | "unread";
   created_at?: string;
 }
 
 export const notificationsApi = {
-  list: () => api.get("notifications"),
+  // Listar notificações do usuário
+  list: (): Promise<Notification[]> => {
+    return api.get("/notifications");
+  },
 
-  markAsRead: (id: number | string) =>
-    api.patch(`notifications/${id}/read`),
+  // Marcar uma notificação como lida
+  markAsRead: (notificationId: number): Promise<{ success: boolean }> => {
+    return api.patch(`/notifications/${notificationId}`);
+  },
 };
