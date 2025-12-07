@@ -1,6 +1,7 @@
 // src/lib/api/auth.ts
 import { api } from "./index";
 
+
 export interface RegisterClientPayload {
   name: string;
   email: string;
@@ -53,13 +54,14 @@ export const authApi = {
       throw new Error("Token inválido.");
     }
 
-    // Caso de troca obrigatória de senha
+    // 1) Se precisa trocar senha → salva somente o TEMP TOKEN
     if (res.must_change_password) {
       localStorage.setItem("barboo_temp_token", res.token);
+      localStorage.removeItem("barboo_token"); // evita conflito
       return { must_change_password: true };
     }
 
-    // Caso normal
+    // 2) Fluxo normal
     localStorage.setItem("barboo_token", res.token);
     localStorage.setItem("barboo_user", JSON.stringify(res.user));
 
@@ -70,19 +72,11 @@ export const authApi = {
     const tempToken = localStorage.getItem("barboo_temp_token");
     if (!tempToken) throw new Error("Token de verificação ausente.");
 
-    // Troca temporariamente o token usado pelo wrapper
-    const oldToken = localStorage.getItem("barboo_token");
-    localStorage.setItem("barboo_token", tempToken);
-
+    // Faz a troca de senha usando o temp token no header (já ajustamos no api/index.ts)
     const res = await api.patch("/auth/change-password", { newPassword });
 
-    // Remove token temporário e restaura o antigo (se existir)
+    // Limpa após uso
     localStorage.removeItem("barboo_temp_token");
-    if (oldToken) {
-      localStorage.setItem("barboo_token", oldToken);
-    } else {
-      localStorage.removeItem("barboo_token");
-    }
 
     return res;
   },

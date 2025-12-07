@@ -6,11 +6,18 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Users, Mail, Phone } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { barbersApi } from "@/lib/api/barbers";
+import { barbershopsApi } from "@/lib/api/barbershops";
 import { toast } from "@/hooks/use-toast";
 
 const OwnerTeam = () => {
@@ -25,15 +32,27 @@ const OwnerTeam = () => {
     name: "",
     email: "",
     phone: "",
+    cpf: "",
+    birth_date: "",
+    bio: "",
+    password: "",
   });
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
-    if (user.barbershop_id) {
-      setBarbershopId(user.barbershop_id);
-      loadBarbers(user.barbershop_id);
-    }
+    loadBarbershopAndTeam();
   }, []);
+
+  const loadBarbershopAndTeam = async () => {
+    try {
+      const shop = await barbershopsApi.getMine();
+      if (!shop?.id) return;
+
+      setBarbershopId(shop.id);
+      loadBarbers(shop.id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const loadBarbers = async (id: number) => {
     try {
@@ -50,20 +69,49 @@ const OwnerTeam = () => {
     e.preventDefault();
     if (!barbershopId) return;
 
+    if (!formData.password) {
+      toast({
+        title: "Senha obrigatória",
+        description: "Para criar o barbeiro é preciso definir uma senha.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await barbersApi.create({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        barbershop_id: barbershopId,
+      await barbersApi.create(barbershopId, {
+        user: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          cpf: formData.cpf,
+          gender: "n/a",
+          password: formData.password,
+        },
+        profile: {
+          bio: formData.bio || "",
+        },
       });
-      toast({ title: "Barbeiro adicionado!" });
+
+      toast({ title: "Barbeiro adicionado com sucesso!" });
       setDialogOpen(false);
-      setFormData({ name: "", email: "", phone: "" });
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        cpf: "",
+        birth_date: "",
+        bio: "",
+        password: "",
+      });
       loadBarbers(barbershopId);
     } catch (error: any) {
-      toast({ title: error.message || "Erro ao adicionar", variant: "destructive" });
+      toast({
+        title: "Erro ao adicionar barbeiro",
+        description: error?.message,
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -98,42 +146,82 @@ const OwnerTeam = () => {
                 <DialogHeader>
                   <DialogTitle>Adicionar Barbeiro</DialogTitle>
                 </DialogHeader>
+
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                   <div>
                     <Label>Nome</Label>
                     <Input
-                      placeholder="Nome do barbeiro"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                     />
                   </div>
+
                   <div>
                     <Label>E-mail</Label>
                     <Input
                       type="email"
-                      placeholder="email@exemplo.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                     />
                   </div>
+
                   <div>
                     <Label>Telefone</Label>
                     <Input
-                      placeholder="(00) 00000-0000"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                     />
                   </div>
-                  <PrimaryButton type="submit" className="w-full" disabled={submitting}>
-                    {submitting ? "Adicionando..." : "Adicionar Barbeiro"}
+
+                  <div>
+                    <Label>CPF</Label>
+                    <Input
+                      value={formData.cpf}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cpf: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Bio (opcional)</Label>
+                    <Input
+                      value={formData.bio}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bio: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Senha</Label>
+                    <Input
+                      type="password"
+                      required
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <PrimaryButton disabled={submitting} className="w-full">
+                    {submitting ? "Criando..." : "Criar Barbeiro"}
                   </PrimaryButton>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
+          {/* LISTAGEM */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
@@ -143,7 +231,9 @@ const OwnerTeam = () => {
           ) : barbers.length === 0 ? (
             <Card className="p-12 text-center">
               <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-navy mb-2">Nenhum barbeiro cadastrado</h3>
+              <h3 className="text-xl font-bold text-navy mb-2">
+                Nenhum barbeiro cadastrado
+              </h3>
               <p className="text-muted-foreground mb-6">
                 Adicione os profissionais da sua equipe.
               </p>
@@ -154,27 +244,30 @@ const OwnerTeam = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {barbers.map((barber) => (
-                <Card key={barber.id} className="p-5 hover:shadow-medium transition-smooth">
+              {barbers.map((b) => (
+                <Card key={b.id} className="p-5 hover:shadow-medium transition-smooth">
                   <div className="flex items-center gap-4">
                     <Avatar className="w-14 h-14">
-                      <AvatarImage src={barber.photo_url} />
+                      <AvatarImage src={b.avatar_url} />
                       <AvatarFallback className="bg-accent/10 text-accent text-lg">
-                        {barber.name?.charAt(0)?.toUpperCase() || "B"}
+                        {b.name?.charAt(0)?.toUpperCase() || "B"}
                       </AvatarFallback>
                     </Avatar>
+
                     <div className="flex-1">
-                      <h3 className="font-bold text-navy font-manrope">{barber.name}</h3>
-                      {barber.email && (
+                      <h3 className="font-bold text-navy font-manrope">{b.name}</h3>
+
+                      {b.email && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <Mail className="w-3 h-3" />
-                          {barber.email}
+                          {b.email}
                         </p>
                       )}
-                      {barber.phone && (
+
+                      {b.phone && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <Phone className="w-3 h-3" />
-                          {barber.phone}
+                          {b.phone}
                         </p>
                       )}
                     </div>

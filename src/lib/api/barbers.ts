@@ -1,58 +1,37 @@
 import { api } from "./index";
 
-export interface BarberUserPayload {
+export interface CreateBarberUser {
   name: string;
   email: string;
   phone: string;
   cpf: string;
   gender: string;
+  password: string;
 }
 
-export interface BarberProfilePayload {
-  [key: string]: any; // flexível porque o backend não especifica campos fixos
+export interface CreateBarberProfile {
+  bio?: string; // apenas bio, conforme seu pedido
 }
 
 export interface CreateBarberPayload {
-  user: BarberUserPayload;
-  profile: BarberProfilePayload;
-}
-
-export interface BarberLink {
-  id: number;
-  barbershop_id: number;
-  user_id: number;
-  is_owner: boolean;
-  is_active: boolean;
+  user: CreateBarberUser;
+  profile: CreateBarberProfile;
 }
 
 export const barbersApi = {
-  // Criar barbeiro
-  create: (
-    barbershopId: number,
-    data: CreateBarberPayload
-  ) => {
-    return api.post(`/barbers/${barbershopId}/barbers`, data);
-  },
+  /** Criar barbeiro */
+  create: (barbershopId: number, payload: CreateBarberPayload) =>
+    api.post(`/barbers/${barbershopId}/barbers`, payload),
 
-  // Listar barbeiros (vínculos)
-  list: (barbershopId: number): Promise<BarberLink[]> => {
-    return api.get(`/barbers/${barbershopId}/barbers`);
-  },
+  /** Listar vínculos */
+  list: (barbershopId: number) =>
+    api.get(`/barbers/${barbershopId}/barbers`),
 
-  // Atualizar barbeiro (owner)
-  update: (
-    barbershopId: number,
-    userId: number,
-    updates: Record<string, any>
-  ) => {
-    return api.patch(
-      `/barbers/${barbershopId}/barbers/${userId}`,
-      updates
-    );
-  },
+  /** Update */
+  update: (barbershopId: number, userId: number, updates: any) =>
+    api.patch(`/barbers/${barbershopId}/barbers/${userId}`, updates),
 
-  // Owner vira também barbeiro
-  linkOwner: (barbershopId: number) => {
-    return api.post(`/barbers/${barbershopId}/link-owner`, {});
-  }
+  /** Owner vira barbeiro */
+  linkOwner: (barbershopId: number, payload?: any) =>
+    api.post(`/barbers/${barbershopId}/link-owner`, payload || {}),
 };

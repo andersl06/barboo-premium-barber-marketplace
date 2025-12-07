@@ -1,9 +1,22 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 function authHeaders() {
-  const token = localStorage.getItem("barboo_token");
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  // Aqui está a lógica correta:
+  // 1) Se existir token TEMPORÁRIO → usa ele
+  // 2) Senão → usa o token normal
+  const tempToken = localStorage.getItem("barboo_temp_token");
+  const normalToken = localStorage.getItem("barboo_token");
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  const tokenToUse = tempToken || normalToken;
+
+  if (tokenToUse) {
+    headers.Authorization = `Bearer ${tokenToUse}`;
+  }
+
   return headers;
 }
 

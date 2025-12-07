@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/ui/Logo";
 import { PageTitle } from "@/components/ui/PageTitle";
@@ -14,7 +15,10 @@ import { toast } from "@/components/ui/use-toast";
 
 import { barbershopsApi } from "@/lib/api/barbershops";
 import { barbersApi } from "@/lib/api/barbers";
+import { usersApi } from "@/lib/api/users";
+import { getOwnerDraft, clearOwnerDraft } from "@/lib/auth/ownerDraft";
 
+// Dias de funcionamento
 const DAYS = [
   { id: "monday", label: "Segunda" },
   { id: "tuesday", label: "Terça" },
@@ -30,22 +34,23 @@ const OwnerOnboarding = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  const ownerDraft = getOwnerDraft();
+
   // ---------------- STEP 1 — BARBERSHOP DATA ----------------
   const [barbershopData, setBarbershopData] = useState({
-    name: "",
-    phone: "",
-    zipcode: "",
-    address: "",
-    address_number: "",
-    address_complement: "",
-    neighborhood: "",
-    city: "",
-    state: "",
+    name: ownerDraft?.shopName || "",
+    phone: ownerDraft?.phone || "",
+    zipcode: ownerDraft?.zipcode || "",
+    address: ownerDraft?.address || "",
+    address_number: ownerDraft?.address_number || "",
+    address_complement: ownerDraft?.address_complement || "",
+    neighborhood: ownerDraft?.neighborhood || "",
+    city: ownerDraft?.city || "",
+    state: ownerDraft?.state || "",
   });
 
-  // Busca CEP
   async function handleCepBlur() {
-    const cep = barbershopData.zipcode.replace(/\D/g, "");
+    const cep = (barbershopData.zipcode || "").replace(/\D/g, "");
     if (cep.length < 8) return;
 
     try {
@@ -69,10 +74,7 @@ const OwnerOnboarding = () => {
         state: data.uf || "",
       }));
     } catch {
-      toast({
-        title: "Erro ao buscar CEP",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao buscar CEP", variant: "destructive" });
     }
   }
 
@@ -87,17 +89,37 @@ const OwnerOnboarding = () => {
     sunday: { enabled: false, start: "09:00", end: "18:00" },
   });
 
-  // ---------------- STEP 3 — FIRST BARBER DATA ----------------
+  // ---------------- STEP 3 — BARBER DATA ----------------
+  const [ownerAlsoBarber, setOwnerAlsoBarber] = useState(true);
+
   const [barberData, setBarberData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    cpf: "",
-    birth_date: "",
+    name: ownerDraft?.name || "",
+    email: ownerDraft?.email || "",
+    phone: ownerDraft?.phone || "",
+    cpf: ownerDraft?.cpf || "",
     password: "",
     confirm_password: "",
     bio: "",
   });
+
+  useEffect(() => {
+    if (!ownerDraft) {
+      (async () => {
+        try {
+          const me = await usersApi.me();
+          if (me) {
+            setBarberData((prev) => ({
+              ...prev,
+              name: me.name || prev.name,
+              email: me.email || prev.email,
+              phone: me.phone || prev.phone,
+              cpf: me.cpf || prev.cpf,
+            }));
+          }
+        } catch {}
+      })();
+    }
+  }, [ownerDraft]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -112,7 +134,7 @@ const OwnerOnboarding = () => {
     }
 
     if (step === 3) {
-      if (barberData.password && barberData.password !== barberData.confirm_password) {
+      if (!ownerAlsoBarber && barberData.password !== barberData.confirm_password) {
         toast({
           title: "Senhas diferentes",
           description: "A senha e a confirmação precisam ser iguais.",
@@ -122,10 +144,10 @@ const OwnerOnboarding = () => {
       }
     }
 
-    setStep(step + 1);
+    setStep((s) => s + 1);
   };
 
-  const handleBack = () => setStep(step - 1);
+  const handleBack = () => setStep((s) => Math.max(s - 1, 1));
 
   // ---------------- STEP 4 — FINISH ----------------
   const handleFinish = async () => {
@@ -133,51 +155,60 @@ const OwnerOnboarding = () => {
 
     try {
       // 1 — Criar barbearia
-      const newShop = await barbershopsApi.create({
+      const payload = {
         ...barbershopData,
         opening_hours: schedule,
         slug: barbershopData.name.toLowerCase().replace(/\s+/g, "-"),
-      });
+      };
 
-      if (!newShop?.id) throw new Error("Erro ao criar barbearia.");
+      const shop = await barbershopsApi.create(payload);
+      if (!shop?.id) throw new Error("Erro ao criar barbearia.");
+      const barbershopId = shop.id;
 
-      const barbershopId = newShop.id;
-
-      // 2 — Vincular owner como barbeiro
-      try {
-        await barbersApi.linkOwner(barbershopId);
-      } catch {
-        console.warn("Owner já era barbeiro.");
+      // 2 — OWNER TAMBÉM É BARBEIRO
+      if (ownerAlsoBarber) {
+        await barbersApi.linkOwner(barbershopId, {
+          profile: { bio: barberData.bio || "" },
+        });
       }
 
-      // 3 — Criar primeiro barbeiro SE dados completos forem preenchidos
-      if (barberData.name && barberData.email && barberData.phone && barberData.password && barberData.cpf && barberData.birth_date) {
+      // 3 — Criar barbeiro SEPARADO
+      const shouldCreateNew =
+        !ownerAlsoBarber &&
+        barberData.name &&
+        barberData.email &&
+        barberData.phone &&
+        barberData.cpf &&
+        barberData.password;
+
+      if (shouldCreateNew) {
         await barbersApi.create(barbershopId, {
           user: {
             name: barberData.name,
             email: barberData.email,
             phone: barberData.phone,
+            cpf: barberData.cpf,
+            gender: "n/a",
             password: barberData.password,
           },
           profile: {
-            document: barberData.cpf,
-            birth_date: barberData.birth_date,
             bio: barberData.bio || "",
           },
         });
       }
 
+      clearOwnerDraft();
+
       toast({
         title: "Sucesso!",
-        description: "Sua barbearia foi criada com sucesso.",
+        description: "Sua barbearia foi configurada com sucesso.",
       });
 
       navigate("/owner/dashboard");
-
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
-        title: "Erro",
-        description: error?.message || "Não foi possível finalizar o onboarding.",
+        title: "Erro ao finalizar",
+        description: err?.message || "Tente novamente.",
         variant: "destructive",
       });
     }
@@ -185,6 +216,7 @@ const OwnerOnboarding = () => {
     setLoading(false);
   };
 
+  // ---------------- TEMPLATE ----------------
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -193,118 +225,49 @@ const OwnerOnboarding = () => {
         </div>
 
         <Card className="p-8 shadow-medium border-border">
-
-          {/* Progress Bar */}
+          {/* Progress bar */}
           <div className="flex items-center justify-center gap-2 mb-8">
             {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
-                className={`h-2 w-12 rounded-full ${s <= step ? "bg-accent" : "bg-secondary"}`}
+                className={`h-2 w-12 rounded-full ${
+                  s <= step ? "bg-accent" : "bg-secondary"
+                }`}
               />
             ))}
           </div>
 
-          {/* ---------------- STEP 1 ---------------- */}
+          {/* STEP 1 */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <PageTitle className="mb-2">Dados da Barbearia</PageTitle>
+                <PageTitle>Dados da Barbearia</PageTitle>
                 <Subtitle>Vamos começar com as informações básicas</Subtitle>
               </div>
 
               <div className="space-y-4">
-
-                <div>
-                  <Label>Nome da Barbearia *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="Ex: Barbearia Premium"
-                    value={barbershopData.name}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, name: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Telefone *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="(11) 98888-8888"
-                    value={barbershopData.phone}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, phone: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>CEP *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="00000-000"
-                    value={barbershopData.zipcode}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, zipcode: e.target.value })}
-                    onBlur={handleCepBlur}
-                  />
-                </div>
-
-                <div>
-                  <Label>Endereço *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="Rua"
-                    value={barbershopData.address}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, address: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Número *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="123"
-                    value={barbershopData.address_number}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, address_number: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Complemento</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="Apto, bloco, sala..."
-                    value={barbershopData.address_complement}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, address_complement: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Bairro *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="Centro"
-                    value={barbershopData.neighborhood}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, neighborhood: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Cidade *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="São Paulo"
-                    value={barbershopData.city}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, city: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Estado *</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="SP"
-                    value={barbershopData.state}
-                    onChange={(e) => setBarbershopData({ ...barbershopData, state: e.target.value })}
-                  />
-                </div>
-
+                {Object.entries({
+                  name: "Nome",
+                  phone: "Telefone",
+                  zipcode: "CEP",
+                  address: "Endereço",
+                  address_number: "Número",
+                  address_complement: "Complemento",
+                  neighborhood: "Bairro",
+                  city: "Cidade",
+                  state: "Estado",
+                }).map(([key, label]) => (
+                  <div key={key}>
+                    <Label>{label}</Label>
+                    <Input
+                      value={barbershopData[key]}
+                      onChange={(e) =>
+                        setBarbershopData((p) => ({ ...p, [key]: e.target.value }))
+                      }
+                      onBlur={key === "zipcode" ? handleCepBlur : undefined}
+                    />
+                  </div>
+                ))}
               </div>
 
               <PrimaryButton onClick={handleNext} className="w-full h-12">
@@ -313,11 +276,11 @@ const OwnerOnboarding = () => {
             </div>
           )}
 
-          {/* ---------------- STEP 2 ---------------- */}
+          {/* STEP 2 */}
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <PageTitle className="mb-2">Horários de Funcionamento</PageTitle>
+                <PageTitle>Horários de Funcionamento</PageTitle>
                 <Subtitle>Defina quando sua barbearia estará aberta</Subtitle>
               </div>
 
@@ -325,40 +288,37 @@ const OwnerOnboarding = () => {
                 {DAYS.map((day) => (
                   <div key={day.id} className="flex items-center gap-4">
                     <Checkbox
-                      id={day.id}
                       checked={schedule[day.id].enabled}
-                      onCheckedChange={(checked) =>
-                        setSchedule({
-                          ...schedule,
-                          [day.id]: { ...schedule[day.id], enabled: !!checked },
-                        })
+                      onCheckedChange={(v) =>
+                        setSchedule((p) => ({
+                          ...p,
+                          [day.id]: { ...p[day.id], enabled: !!v },
+                        }))
                       }
                     />
-                    <Label htmlFor={day.id} className="w-24">{day.label}</Label>
+                    <Label className="w-24">{day.label}</Label>
 
                     {schedule[day.id].enabled && (
                       <div className="flex items-center gap-2 flex-1">
                         <Input
                           type="time"
-                          className="h-10"
                           value={schedule[day.id].start}
                           onChange={(e) =>
-                            setSchedule({
-                              ...schedule,
-                              [day.id]: { ...schedule[day.id], start: e.target.value },
-                            })
+                            setSchedule((p) => ({
+                              ...p,
+                              [day.id]: { ...p[day.id], start: e.target.value },
+                            }))
                           }
                         />
                         <span className="text-muted-foreground">às</span>
                         <Input
                           type="time"
-                          className="h-10"
                           value={schedule[day.id].end}
                           onChange={(e) =>
-                            setSchedule({
-                              ...schedule,
-                              [day.id]: { ...schedule[day.id], end: e.target.value },
-                            })
+                            setSchedule((p) => ({
+                              ...p,
+                              [day.id]: { ...p[day.id], end: e.target.value },
+                            }))
                           }
                         />
                       </div>
@@ -371,6 +331,7 @@ const OwnerOnboarding = () => {
                 <SecondaryButton onClick={handleBack} className="flex-1 h-12">
                   <ArrowLeft className="mr-2 w-5 h-5" /> Voltar
                 </SecondaryButton>
+
                 <PrimaryButton onClick={handleNext} className="flex-1 h-12">
                   Continuar <ArrowRight className="ml-2 w-5 h-5" />
                 </PrimaryButton>
@@ -378,105 +339,87 @@ const OwnerOnboarding = () => {
             </div>
           )}
 
-          {/* ---------------- STEP 3 ---------------- */}
+          {/* STEP 3 — BARBER INPUTS */}
           {step === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <PageTitle className="mb-2">Adicionar Barbeiro</PageTitle>
+                <PageTitle>Adicionar Barbeiro</PageTitle>
                 <Subtitle>Cadastre seu primeiro barbeiro (opcional)</Subtitle>
               </div>
 
+              <div className="flex items-center gap-3 mb-4">
+                <Checkbox
+                  checked={ownerAlsoBarber}
+                  onCheckedChange={(v) => setOwnerAlsoBarber(!!v)}
+                />
+                <Label>Eu sou proprietário e também quero ser barbeiro</Label>
+              </div>
+
+              {/* CAMPOS SEMPRE EDITÁVEIS */}
               <div className="space-y-4">
+                {[
+                  ["name", "Nome"],
+                  ["email", "E-mail"],
+                  ["phone", "Telefone"],
+                  ["cpf", "CPF"],
+                ].map(([key, label]) => (
+                  <div key={key}>
+                    <Label>{label}</Label>
+                    <Input
+                      value={barberData[key]}
+                      onChange={(e) =>
+                        setBarberData((p) => ({ ...p, [key]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+
+                {/* Somente se NÃO for owner */}
+                {!ownerAlsoBarber && (
+                  <>
+                    <div>
+                      <Label>Senha</Label>
+                      <Input
+                        type="password"
+                        value={barberData.password}
+                        onChange={(e) =>
+                          setBarberData((p) => ({ ...p, password: e.target.value }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Confirmar Senha</Label>
+                      <Input
+                        type="password"
+                        value={barberData.confirm_password}
+                        onChange={(e) =>
+                          setBarberData((p) => ({
+                            ...p,
+                            confirm_password: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
-                  <Label>Nome do Barbeiro</Label>
+                  <Label>Bio</Label>
                   <Input
-                    className="h-12"
-                    placeholder="Ex: João Silva"
-                    value={barberData.name}
-                    onChange={(e) => setBarberData({ ...barberData, name: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>E-mail</Label>
-                  <Input
-                    className="h-12"
-                    type="email"
-                    placeholder="joao@email.com"
-                    value={barberData.email}
-                    onChange={(e) => setBarberData({ ...barberData, email: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Telefone</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="(11) 98888-8888"
-                    value={barberData.phone}
-                    onChange={(e) => setBarberData({ ...barberData, phone: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>CPF</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="000.000.000-00"
-                    value={barberData.cpf}
-                    onChange={(e) => setBarberData({ ...barberData, cpf: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Data de Nascimento</Label>
-                  <Input
-                    className="h-12"
-                    type="date"
-                    value={barberData.birth_date}
-                    onChange={(e) => setBarberData({ ...barberData, birth_date: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Senha</Label>
-                  <Input
-                    className="h-12"
-                    type="password"
-                    value={barberData.password}
-                    onChange={(e) => setBarberData({ ...barberData, password: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Confirmar Senha</Label>
-                  <Input
-                    className="h-12"
-                    type="password"
-                    value={barberData.confirm_password}
+                    value={barberData.bio}
                     onChange={(e) =>
-                      setBarberData({ ...barberData, confirm_password: e.target.value })
+                      setBarberData((p) => ({ ...p, bio: e.target.value }))
                     }
                   />
                 </div>
-
-                <div>
-                  <Label>Bio (opcional)</Label>
-                  <Input
-                    className="h-12"
-                    placeholder="Ex: Apaixonado por cortes clássicos"
-                    value={barberData.bio}
-                    onChange={(e) => setBarberData({ ...barberData, bio: e.target.value })}
-                  />
-                </div>
-
               </div>
 
               <div className="flex gap-3">
                 <SecondaryButton onClick={handleBack} className="flex-1 h-12">
                   <ArrowLeft className="mr-2 w-5 h-5" /> Voltar
                 </SecondaryButton>
+
                 <PrimaryButton onClick={handleNext} className="flex-1 h-12">
                   Continuar <ArrowRight className="ml-2 w-5 h-5" />
                 </PrimaryButton>
@@ -484,16 +427,16 @@ const OwnerOnboarding = () => {
             </div>
           )}
 
-          {/* ---------------- STEP 4 ---------------- */}
+          {/* STEP 4 */}
           {step === 4 && (
             <div className="space-y-6 text-center">
               <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-10 h-10 text-accent" />
               </div>
 
-              <PageTitle className="mb-2">Sua barbearia está pronta!</PageTitle>
+              <PageTitle>Sua barbearia está pronta!</PageTitle>
               <Subtitle>
-                Agora você pode gerenciar sua equipe, agenda e serviços em um só lugar.
+                Agora você pode gerenciar equipe, agenda e serviços.
               </Subtitle>
 
               <div className="pt-4">
@@ -507,7 +450,6 @@ const OwnerOnboarding = () => {
               </div>
             </div>
           )}
-
         </Card>
       </div>
     </div>

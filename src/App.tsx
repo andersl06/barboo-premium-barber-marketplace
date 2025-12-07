@@ -30,6 +30,7 @@ import BarberHome from "./pages/barber/Home";
 import BarberDashboard from "./pages/barber/Dashboard";
 import BarberAgenda from "./pages/barber/Agenda";
 import BarberProfile from "./pages/barber/Profile";
+import MustChangePassword from "./pages/barber/MustChangePassword";
 
 // Owner pages
 import OwnerOnboarding from "./pages/owner/Onboarding";
@@ -60,6 +61,7 @@ const App = () => (
           <Route path="/register-type" element={<RegisterType />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
+          
 
           {/** CLIENT ROUTES */}
           <Route path="/client/home" element={<ClientHome />} />
@@ -81,6 +83,7 @@ const App = () => (
           <Route path="/barber/dashboard" element={<BarberDashboard />} />
           <Route path="/barber/agenda" element={<BarberAgenda />} />
           <Route path="/barber/profile" element={<BarberProfile />} />
+          <Route path="/barber/change-password" element={<MustChangePassword />} />
 
           {/** OWNER ROUTES */}
           <Route path="/owner/onboarding" element={<OwnerOnboarding />} />

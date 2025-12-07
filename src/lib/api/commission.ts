@@ -19,22 +19,11 @@ export interface Invoice {
 }
 
 export const commissionApi = {
-  // CLIENTE VÊ TAXA NO CHECKOUT
-  preview: async (service_price: number): Promise<CommissionPreview> => {
-    return api.get(`/commission/preview?service_price=${service_price}`);
-  },
+  // Cliente vê taxa final no checkout
+  preview: (service_price: number) =>
+    api.get(`/commission/preview?service_price=${service_price}`),
 
-  // OWNER/ADMIN GERA INVOICE
-  generateInvoice: async (
-    barbershopId: number,
-    month?: string
-  ): Promise<Invoice> => {
-    const query = month ? `?month=${month}` : "";
-    return api.get(`/commission/invoice/${barbershopId}${query}`);
-  },
-
-  // (Opcional — só se você quiser expor a função de ciclo)
-  runCycle: async (barbershopId: number) => {
-    return api.get(`/commission/cycle/${barbershopId}`);
-  }
+  // Owner busca invoice (mês atual)
+  getInvoice: (barbershopId: number) =>
+    api.get(`/commission/invoice/${barbershopId}`),
 };
