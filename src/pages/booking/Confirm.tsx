@@ -48,7 +48,7 @@ const BookingConfirm = () => {
 
   const loadBarbershop = async () => {
     try {
-      const data = await barbershopsApi.getById(barbershopId!);
+      const data = await barbershopsApi.getOne(barbershopId!);
       setBarbershop(data);
     } catch (error) {
       console.error("Erro ao carregar barbearia:", error);
@@ -68,12 +68,10 @@ const BookingConfirm = () => {
 
     setLoading(true);
     try {
-      await bookingsApi.create({
+      await bookingsApi.create(Number(barbershopId), {
         barber_id: selectedBarber.id,
-        barbershop_id: Number(barbershopId),
         service_id: selectedService.id,
-        date: datetime.date,
-        start_time: datetime.time,
+        starts_at: `${datetime.date}T${datetime.time}:00`,
       });
 
       setSuccess(true);

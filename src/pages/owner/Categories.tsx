@@ -47,10 +47,10 @@ const OwnerCategories = () => {
 
     try {
       if (editingCategory) {
-        await categoriesApi.update(editingCategory.id, { name });
+        await categoriesApi.update(barbershopId, editingCategory.id, { name });
         toast({ title: "Categoria atualizada!" });
       } else {
-        await categoriesApi.create({ name, barbershop_id: barbershopId });
+        await categoriesApi.create(barbershopId, { name });
         toast({ title: "Categoria criada!" });
       }
 

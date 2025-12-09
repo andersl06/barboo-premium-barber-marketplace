@@ -59,10 +59,7 @@ const BarberProfile = () => {
 
     setLoading(true);
     try {
-      await authApi.changePassword({
-        current_password: passwordData.current_password,
-        new_password: passwordData.new_password,
-      });
+      await authApi.changePassword(passwordData.new_password);
       toast({ title: "Senha alterada com sucesso!" });
       setIsChangingPassword(false);
       setPasswordData({ current_password: "", new_password: "", confirm_password: "" });

@@ -23,7 +23,7 @@ const ClientBookings = () => {
     try {
       const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
       if (user.id) {
-        const data = await bookingsApi.listByClient(user.id);
+        const data = await bookingsApi.listByClient();
         setBookings(Array.isArray(data) ? data : []);
       }
     } catch (error) {
@@ -33,12 +33,12 @@ const ClientBookings = () => {
     }
   };
 
-  const handleCancel = async (bookingId: number) => {
+  const handleCancel = async (booking: any) => {
     try {
-      await bookingsApi.cancel(bookingId);
+      await bookingsApi.cancel(booking.barbershop_id, booking.id);
       setBookings(
         bookings.map((b) =>
-          b.id === bookingId ? { ...b, status: "cancelled" } : b
+          b.id === booking.id ? { ...b, status: "cancelled" } : b
         )
       );
       toast({ title: "Agendamento cancelado" });
@@ -114,7 +114,7 @@ const ClientBookings = () => {
         {showCancel && (booking.status === "pending" || booking.status === "confirmed") && (
           <SecondaryButton
             size="sm"
-            onClick={() => handleCancel(booking.id)}
+            onClick={() => handleCancel(booking)}
             className="text-destructive border-destructive hover:bg-destructive/10"
           >
             <XCircle className="w-4 h-4 mr-1" />

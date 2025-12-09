@@ -27,11 +27,8 @@ const BarberDashboard = () => {
   const loadData = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
-      if (user.barber_id) {
-        const [bookingsData, commissionData] = await Promise.all([
-          bookingsApi.listByBarber(user.barber_id),
-          commissionApi.getByBarber(user.barber_id),
-        ]);
+      if (user.barbershop_id && user.barber_id) {
+        const bookingsData = await bookingsApi.listByBarber(user.barbershop_id, user.barber_id);
 
         const bookings = Array.isArray(bookingsData) ? bookingsData : [];
         const today = new Date().toISOString().split("T")[0];
@@ -42,8 +39,8 @@ const BarberDashboard = () => {
 
         setStats({
           todayBookings: todayBookings.length,
-          totalBookings: commissionData?.total_bookings || 0,
-          earnings: commissionData?.barber_earnings || 0,
+          totalBookings: bookings.length,
+          earnings: 0,
           rating: user.rating || 4.8,
         });
         setUpcomingBookings(upcoming);

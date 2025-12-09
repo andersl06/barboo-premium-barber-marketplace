@@ -30,7 +30,7 @@ const ClientDashboard = () => {
       const storedUser = JSON.parse(localStorage.getItem("barboo_user") || "{}");
       
       const [bookingsData, barbershopsData] = await Promise.all([
-        storedUser.id ? bookingsApi.listByClient(storedUser.id) : Promise.resolve([]),
+        storedUser.id ? bookingsApi.listByClient() : Promise.resolve([]),
         barbershopsApi.list(),
       ]);
       

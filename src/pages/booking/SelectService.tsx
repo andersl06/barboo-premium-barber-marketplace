@@ -29,8 +29,8 @@ const SelectService = () => {
   const loadData = async () => {
     try {
       const [barbershopData, servicesData] = await Promise.all([
-        barbershopsApi.getById(barbershopId!),
-        servicesApi.list(barbershopId!),
+        barbershopsApi.getOne(barbershopId!),
+        servicesApi.list(Number(barbershopId)),
       ]);
       setBarbershop(barbershopData);
       setServices(Array.isArray(servicesData) ? servicesData : []);

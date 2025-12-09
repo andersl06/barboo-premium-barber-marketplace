@@ -28,6 +28,7 @@ const DAYS = [
 const OwnerAvailability = () => {
   const navigate = useNavigate();
   const [barbers, setBarbers] = useState<any[]>([]);
+  const [barbershopId, setBarbershopId] = useState<number | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +56,7 @@ const OwnerAvailability = () => {
     try {
       const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
       if (user.barbershop_id) {
+        setBarbershopId(user.barbershop_id);
         const data = await barbersApi.list(user.barbershop_id);
         setBarbers(Array.isArray(data) ? data : []);
         if (data.length > 0) {
@@ -69,8 +71,9 @@ const OwnerAvailability = () => {
   };
 
   const loadAvailability = async () => {
+    if (!barbershopId) return;
     try {
-      const data = await availabilityApi.get(selectedBarber);
+      const data = await availabilityApi.get(barbershopId, Number(selectedBarber));
       if (Array.isArray(data) && data.length > 0) {
         setSchedule((prev) =>
           prev.map((day) => {
@@ -109,13 +112,13 @@ const OwnerAvailability = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedBarber) return;
+    if (!selectedBarber || !barbershopId) return;
 
     setSaving(true);
     try {
       for (const day of schedule) {
         if (day.enabled) {
-          await availabilityApi.create(selectedBarber, {
+          await availabilityApi.set(barbershopId, Number(selectedBarber), {
             day_of_week: day.day_of_week,
             start_time: day.start_time,
             end_time: day.end_time,
