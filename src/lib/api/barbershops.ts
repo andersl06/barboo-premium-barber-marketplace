@@ -20,6 +20,13 @@ export interface CreateBarbershopPayload {
 }
 
 export const barbershopsApi = {
+  // GET /barbershops (public)
+  list: async (): Promise<Barbershop[]> => {
+    const res = await api.get("/barbershops");
+    if (res && typeof res === "object" && "data" in res) return (res as any).data ?? [];
+    return res ?? [];
+  },
+
   // GET /barbershops/mine  (requires auth)
   getMine: async (): Promise<Barbershop | null> => {
     const res = await api.get("/barbershops/mine");

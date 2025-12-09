@@ -40,7 +40,7 @@ const SelectTime = () => {
 
   const loadAvailability = async () => {
     try {
-      const data = await availabilityApi.get(selectedBarber.id);
+      const data = await availabilityApi.get(Number(barbershopId), selectedBarber.id);
       setAvailability(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro ao carregar disponibilidade:", error);

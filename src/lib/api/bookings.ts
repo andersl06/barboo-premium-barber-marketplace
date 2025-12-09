@@ -20,6 +20,11 @@ export interface Booking {
 }
 
 export const bookingsApi = {
+  // Listar bookings do cliente (CLIENTE)
+  listByClient: (): Promise<Booking[]> => {
+    return api.get("/bookings/my");
+  },
+
   // Criar booking (CLIENTE)
   create: (
     barbershopId: number,

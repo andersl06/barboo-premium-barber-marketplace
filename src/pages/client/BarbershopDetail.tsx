@@ -23,8 +23,8 @@ const BarbershopDetail = () => {
   const loadData = async () => {
     try {
       const [barbershopData, barbersData] = await Promise.all([
-        barbershopsApi.getById(id!),
-        barbersApi.list(id!),
+        barbershopsApi.getOne(id!),
+        barbersApi.list(Number(id)),
       ]);
       setBarbershop(barbershopData);
       setBarbers(Array.isArray(barbersData) ? barbersData : []);

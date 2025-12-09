@@ -28,7 +28,7 @@ const SelectBarber = () => {
 
   const loadBarbers = async () => {
     try {
-      const data = await barbersApi.list(barbershopId!);
+      const data = await barbersApi.list(Number(barbershopId));
       setBarbers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro ao carregar barbeiros:", error);

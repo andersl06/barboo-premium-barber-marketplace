@@ -31,7 +31,7 @@ const BarbershopEdit = () => {
     try {
       const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
       if (user.barbershop_id) {
-        const data = await barbershopsApi.getById(user.barbershop_id);
+        const data = await barbershopsApi.getOne(user.barbershop_id);
         setBarbershop(data);
         setFormData({
           name: data.name || "",

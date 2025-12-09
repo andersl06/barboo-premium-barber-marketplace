@@ -24,8 +24,8 @@ const BarberAgenda = () => {
   const loadBookings = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("barboo_user") || "{}");
-      if (user.barber_id) {
-        const data = await bookingsApi.listByBarber(user.barber_id);
+      if (user.barbershop_id && user.barber_id) {
+        const data = await bookingsApi.listByBarber(user.barbershop_id, user.barber_id);
         setBookings(Array.isArray(data) ? data : []);
       }
     } catch (error) {

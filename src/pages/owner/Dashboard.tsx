@@ -54,7 +54,7 @@ const OwnerDashboard = () => {
 
       // 3 — Buscar financeiro (invoice do mês atual)
       try {
-        const invoice = await commissionApi.generateInvoice(shop.id);
+        const invoice = await commissionApi.getInvoice(shop.id);
         setCommission(invoice || { total_commission: 0 });
       } catch (err) {
         console.warn("Erro ao carregar comissão:", err);

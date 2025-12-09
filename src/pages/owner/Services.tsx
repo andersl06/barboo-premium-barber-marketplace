@@ -56,15 +56,14 @@ const OwnerServices = () => {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        duration: parseInt(formData.duration),
-        barbershop_id: barbershopId,
+        duration_minutes: parseInt(formData.duration),
       };
 
       if (editingService) {
         await servicesApi.update(editingService.id, payload);
         toast({ title: "Serviço atualizado!" });
       } else {
-        await servicesApi.create(payload);
+        await servicesApi.create(barbershopId, payload);
         toast({ title: "Serviço criado!" });
       }
 
