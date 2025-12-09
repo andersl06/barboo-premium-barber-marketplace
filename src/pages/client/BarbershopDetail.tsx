@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { barbershopsApi } from "@/lib/api/barbershops";
 import { barbersApi } from "@/lib/api/barbers";
 import barbooLogo from "@/assets/barboo-logo.png";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const BarbershopDetail = () => {
   const { id } = useParams();
@@ -155,6 +156,9 @@ const BarbershopDetail = () => {
           </Button>
         </Card>
       </div>
+
+      {/* Floating Menu Button */}
+      <FloatingMenuButton />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Search, MapPin, Star, Filter, ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useState, useEffect } from "react";
 import { barbershopsApi } from "@/lib/api/barbershops";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const Barbershops = () => {
   const navigate = useNavigate();
@@ -106,6 +107,9 @@ const Barbershops = () => {
           </div>
         )}
       </div>
+
+      {/* Floating Menu Button */}
+      <FloatingMenuButton />
     </div>
   );
 };
