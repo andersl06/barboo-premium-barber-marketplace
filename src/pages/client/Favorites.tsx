@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { favoritesApi } from "@/lib/api/favorites";
 import { toast } from "@/hooks/use-toast";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const ClientFavorites = () => {
   const navigate = useNavigate();
@@ -93,6 +94,9 @@ const ClientFavorites = () => {
               ))}
             </div>
           )}
+
+          {/* Floating Menu Button */}
+          <FloatingMenuButton />
         </div>
       </div>
     </Layout>

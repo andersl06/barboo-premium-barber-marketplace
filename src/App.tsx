@@ -12,7 +12,6 @@ import Login from "./pages/Login";
 
 // Client pages
 import ClientHome from "./pages/client/Home";
-import ClientDashboard from "./pages/client/Dashboard";
 import ClientProfile from "./pages/client/Profile";
 import ClientFavorites from "./pages/client/Favorites";
 import ClientBookings from "./pages/client/Bookings";
@@ -65,7 +64,6 @@ const App = () => (
 
           {/** CLIENT ROUTES */}
           <Route path="/client/home" element={<ClientHome />} />
-          <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/client/profile" element={<ClientProfile />} />
           <Route path="/client/favorites" element={<ClientFavorites />} />
           <Route path="/client/bookings" element={<ClientBookings />} />

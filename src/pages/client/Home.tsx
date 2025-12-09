@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { barbershopsApi } from "@/lib/api/barbershops";
 import { Card } from "@/components/ui/card";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const ClientHome = () => {
   const navigate = useNavigate();
@@ -90,6 +91,9 @@ const ClientHome = () => {
             )}
           </div>
         </div>
+
+        {/* Floating Menu Button */}
+        <FloatingMenuButton />
       </div>
     </Layout>
   );

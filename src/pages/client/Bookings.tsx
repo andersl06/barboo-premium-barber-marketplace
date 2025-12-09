@@ -10,6 +10,7 @@ import { bookingsApi } from "@/lib/api/bookings";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const ClientBookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -189,6 +190,9 @@ const ClientBookings = () => {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Floating Menu Button */}
+        <FloatingMenuButton />
       </div>
     </Layout>
   );

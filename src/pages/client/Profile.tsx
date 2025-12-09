@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { authApi } from "@/lib/api/auth";
+import { FloatingMenuButton } from "@/components/client/FloatingMenuButton";
 
 const ClientProfile = () => {
   const navigate = useNavigate();
@@ -182,7 +183,7 @@ const ClientProfile = () => {
           </Card>
 
           {/* Logout */}
-          <Card className="p-6">
+          <Card className="p-6 mb-20">
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 p-4 text-destructive hover:bg-destructive/10 rounded-lg transition-smooth"
@@ -191,6 +192,9 @@ const ClientProfile = () => {
               <span className="font-semibold">Sair da conta</span>
             </button>
           </Card>
+
+          {/* Floating Menu Button */}
+          <FloatingMenuButton />
         </div>
       </div>
     </Layout>
